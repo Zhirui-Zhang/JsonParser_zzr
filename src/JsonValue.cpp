@@ -1,4 +1,6 @@
 #include "JsonValue.h"
+#include "JsonParser.h"
+#include "JsonStringify.h"
 #include <cassert>
 
 using namespace std;
@@ -57,16 +59,17 @@ JsonValue& JsonValue::operator=(JsonValue&& rhs) noexcept {
 }
 
 // parse/stringify function
-void JsonValue::json_parse(const string& json) noexcept {
-
+int JsonValue::json_parse(const string& json) noexcept {
+    Parser p(*this, json);
+    return p.parse();
 }
 
-void JsonValue::json_parse_file(const string& filename) noexcept {
-
+int JsonValue::json_parse_file(const string& filename) noexcept {
+    
 }
 
 void JsonValue::json_stringify(string& str) const noexcept {
-
+    Generator(*this, str);
 }
 
 // init/free function
@@ -115,6 +118,10 @@ void JsonValue::json_swap(JsonValue& rhs) noexcept {
 // all kinds of API provided for user 
 JSON_TYPE JsonValue::json_get_type() const noexcept {
     return m_type;
+}
+
+void JsonValue::json_set_type(JSON_TYPE type) noexcept {
+    m_type = type;
 }
 
 // void json_set_type(JSON_TYPE t) noexcept;

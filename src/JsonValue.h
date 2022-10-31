@@ -1,6 +1,5 @@
 #ifndef JSON_VALUE_H
 #define JSON_VALUE_H
-// #include "Json.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -39,8 +38,8 @@ public:
     JsonValue& operator=(JsonValue&& rhs) noexcept;
 
     // parse/stringify function
-    void json_parse(const string& json) noexcept;
-    void json_parse_file(const string& filename) noexcept;
+    int json_parse(const string& json) noexcept;
+    int json_parse_file(const string& filename) noexcept;
     void json_stringify(string& str) const noexcept;
 
     // init/free function
@@ -58,7 +57,7 @@ public:
 
     // all kinds of API provided for user 
     JSON_TYPE json_get_type() const noexcept;
-    // void json_set_type(JSON_TYPE t) noexcept;
+    void json_set_type(JSON_TYPE t) noexcept;
 
     bool json_get_boolean() const noexcept;
     void json_set_boolean(bool b) noexcept;
