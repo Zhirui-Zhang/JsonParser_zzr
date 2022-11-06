@@ -39,7 +39,6 @@ public:
 
     // parse/stringify function
     int json_parse(const string& json) noexcept;
-    int json_parse_file(const string& filename) noexcept;
     void json_stringify(string& str) const noexcept;
 
     // init/free function
@@ -81,6 +80,7 @@ public:
     void json_insert_array_element(const JsonValue& jv, size_t index) noexcept;
     void json_erase_array_element(size_t index, size_t count) noexcept;
 
+    const map<string, JsonValue>& json_get_object() const noexcept; 
     size_t json_get_object_size() const noexcept;
     void json_clear_object() noexcept;
     bool json_find_object_key(const string& key) const noexcept;

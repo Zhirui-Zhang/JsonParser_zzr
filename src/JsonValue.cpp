@@ -64,10 +64,6 @@ int JsonValue::json_parse(const string& json) noexcept {
     return p.parse();
 }
 
-int JsonValue::json_parse_file(const string& filename) noexcept {
-    
-}
-
 void JsonValue::json_stringify(string& str) const noexcept {
     Generator(*this, str);
 }
@@ -226,6 +222,11 @@ void JsonValue::json_erase_array_element(size_t index, size_t count) noexcept {
 }
 
 // using existed fuction in std::map
+const map<string, JsonValue>& JsonValue::json_get_object() const noexcept {
+    assert(m_type == JSON_OBJECT);
+    return std::get<map<string, JsonValue>>(m_var);
+}
+
 size_t JsonValue::json_get_object_size() const noexcept {
     assert(m_type == JSON_OBJECT);
     return std::get<map<string, JsonValue>>(m_var).size();
