@@ -1,100 +1,82 @@
 #ifndef JSON_VALUE_H
 #define JSON_VALUE_H
-#include <string>
 #include <vector>
 #include <map>
-// #include <utility>  // pair<string, JsonValue>
-#include <variant>
-// notice that maybe you should set "cppStandard": "c++17" in c_cpp_properties.json
+#include "JsonEnum.h"
+#include "Json.h"
+
 using namespace std;
 
 namespace myJson {
 
-// enum for all JSON_TYPE
-enum JSON_TYPE {
-    JSON_NULL = 0,
-    JSON_FALSE,
-    JSON_TRUE,
-    JSON_NUMBER,
-    JSON_STRING,
-    JSON_ARRAY,
-    JSON_OBJECT
-};
-
-// forward declaration
-bool operator==(const JsonValue& lhs, const JsonValue& rhs) noexcept;
-bool operator!=(const JsonValue& lhs, const JsonValue& rhs) noexcept;
-
 class JsonValue {
-public:
-    // JsonValue class doesn't provide any interfaces, thus all members can be set as private
 
+public:
     // ctor dtor cctor rvalue etc
-    JsonValue() noexcept { json_init(); }
+    JsonValue() noexcept;
     ~JsonValue() noexcept;
     JsonValue(const JsonValue& rhs) noexcept;
     JsonValue& operator=(const JsonValue& rhs) noexcept;
-    JsonValue(JsonValue&& rhs) noexcept;
-    JsonValue& operator=(JsonValue&& rhs) noexcept;
 
     // parse/stringify function
-    int json_parse(const string& json) noexcept;
-    void json_stringify(string& str) const noexcept;
+    int parse(const string& json) noexcept;
+    void stringify(string& str) const noexcept;
 
-    // init/free function
-    inline void json_init() noexcept { m_type = JSON_NULL; }
-    void json_free() noexcept;
+    // all kinds of API provided for user, notice that all get-type functions can be set as const, which can be used in const objects, and set-type cannot
+    JSON_TYPE get_type() const noexcept;
+    void set_type(JSON_TYPE t) noexcept;
 
-    // copy move swap function
-    void json_copy(const JsonValue& rhs) noexcept;
-    void json_move(JsonValue& rhs) noexcept;
-    void json_swap(JsonValue& rhs) noexcept;
+    double get_number() const noexcept;
+    void set_number(double d) noexcept;
 
-    // override for ==/!= operator
-    friend bool operator==(const JsonValue& lhs, const JsonValue& rhs) noexcept;
-    friend bool operator!=(const JsonValue& lhs, const JsonValue& rhs) noexcept;
+    const string& get_string() const noexcept;
+    size_t get_string_length() const noexcept;
+    void set_string(const string& str) noexcept;
 
-    // all kinds of API provided for user 
-    JSON_TYPE json_get_type() const noexcept;
-    void json_set_type(JSON_TYPE t) noexcept;
+    void set_array(const vector<JsonValue> &arr) noexcept;
+    size_t get_array_size() const noexcept;
+    size_t get_array_capacity() const noexcept;
+    void reserve_array(size_t capacity) noexcept;
+    void shrink_array() noexcept;
+    void clear_array() noexcept;
+    const JsonValue& get_array_element(size_t index) const noexcept;
+    void pushback_array_element(const JsonValue& jv) noexcept;
+    void popback_array_element() noexcept;
+    void insert_array_element(size_t index, const JsonValue& jv) noexcept;
+    void erase_array_element(size_t index, size_t count) noexcept;
 
-    bool json_get_boolean() const noexcept;
-    void json_set_boolean(bool b) noexcept;
-
-    double json_get_number() const noexcept;
-    void json_set_number(double d) noexcept;
-
-    const string json_get_string() const noexcept;
-    size_t json_get_string_length() const noexcept;
-    void json_set_string(const string& str) noexcept;
-
-    void json_set_array(size_t capacity) noexcept;
-    size_t json_get_array_size() const noexcept;
-    size_t json_get_array_capacity() const noexcept;
-    void json_reserve_array(size_t capacity) noexcept;
-    void json_shrink_array() noexcept;
-    void json_clear_array() noexcept;
-    const JsonValue& json_get_array_element(size_t index) const noexcept;
-    void json_pushback_array_element(const JsonValue& jv) noexcept;
-    void json_popback_array_element() noexcept;
-    void json_insert_array_element(const JsonValue& jv, size_t index) noexcept;
-    void json_erase_array_element(size_t index, size_t count) noexcept;
-
-    const map<string, JsonValue>& json_get_object() const noexcept; 
-    size_t json_get_object_size() const noexcept;
-    void json_clear_object() noexcept;
-    bool json_find_object_key(const string& key) const noexcept;
-    const JsonValue& json_get_object_value(const string& key) const noexcept;
-    void json_set_object_value(const string& key, const JsonValue& val) noexcept;
-    void json_remove_object_value(const string& key) noexcept;
+    const map<string, JsonValue>& get_object() const noexcept;
+    void set_object(const map<string, JsonValue>& obj) noexcept;
+    size_t get_object_size() const noexcept;
+    void clear_object() noexcept;
+    bool find_object_key(const string& key) const noexcept;
+    const JsonValue& get_object_value(const string& key) const noexcept;
+    void set_object_value(const string& key, const JsonValue& val) noexcept;
+    void remove_object_value(const string& key) noexcept;
 
 private:
     // indicates type of current json
     JSON_TYPE m_type;
-    // C++17 new characteristic, same function as union, but more safer, reference to https://zh.cppreference.com/w/cpp/utility/variant 
-    // variant<double, string, vector<JsonValue>, vector<pair<string, JsonValue>>> m_var;
-    std::variant<double, string, vector<JsonValue>, map<string, JsonValue>> m_var;
+
+    // be careful that union can not be named here, otherwise deleted ctor error would generate
+    union {
+        double m_num;
+        string m_str;
+        vector<JsonValue> m_arr;
+        map<string, JsonValue> m_obj;
+    };
+
+    // init/free function
+    void init(const JsonValue& rhs) noexcept;
+    void free() noexcept;
+
+    // override for ==/!= operator
+    friend bool operator==(const JsonValue& lhs, const JsonValue& rhs) noexcept;
+    friend bool operator!=(const JsonValue& lhs, const JsonValue& rhs) noexcept;
 };
+
+bool operator==(const JsonValue& lhs, const JsonValue& rhs) noexcept;
+bool operator!=(const JsonValue& lhs, const JsonValue& rhs) noexcept;
 
 };
 

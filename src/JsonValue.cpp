@@ -3,259 +3,226 @@
 #include "JsonStringify.h"
 #include <cassert>
 
-using namespace std;
-
 namespace myJson {
 
 // define all functions declared in JsonValue.h
 // ctor dtor cctor rvalue etc
+JsonValue::JsonValue() noexcept : m_type(JSON_NULL) {}
+
 JsonValue::~JsonValue() noexcept {
-    json_free();
+    free();
 }
 
 JsonValue::JsonValue(const JsonValue& rhs) noexcept {
-    json_free();
-    *this = rhs;
+    init(rhs);
 }
 
 JsonValue& JsonValue::operator=(const JsonValue& rhs) noexcept {
-    json_free();
-    m_type = rhs.m_type;
-    switch (m_type) {
-        case JSON_NUMBER : 
-            m_var = std::get<0>(rhs.m_var);     // 0 -> double
-            break;
-        case JSON_STRING : 
-            m_var = std::get<string>(rhs.m_var);
-            break;
-        // using exised function to initialize array
-        case JSON_ARRAY :
-            for (auto& ele : std::get<vector<JsonValue>>(rhs.m_var)) {
-                json_pushback_array_element(ele);
-            }
-            break;
-        case JSON_OBJECT :
-            for (auto& [key, val] : std::get<map<string, JsonValue>>(rhs.m_var)) {
-                json_set_object_value(key, val);
-            }
-            break;
-        default :
-            break;
-    }
-    return *this;
-}
-
-// using std::move to realize rvalue ctor
-JsonValue::JsonValue(JsonValue&& rhs) noexcept {
-    json_free();
-    *this = std::move(rhs);
-}
-
-JsonValue& JsonValue::operator=(JsonValue&& rhs) noexcept {
-    json_free();
-    m_type = std::move(rhs.m_type);
-    m_var = std::move(rhs.m_var);
+    free();
+    init(rhs);
     return *this;
 }
 
 // parse/stringify function
-int JsonValue::json_parse(const string& json) noexcept {
+int JsonValue::parse(const string& json) noexcept {
     Parser p(*this, json);
-    return p.parse();
+    int res = p.parse();
+    return res;
 }
 
-void JsonValue::json_stringify(string& str) const noexcept {
+void JsonValue::stringify(string& str) const noexcept {
     Generator(*this, str);
 }
 
 // init/free function
-void JsonValue::json_free() noexcept {
-    // switch (m_type) {
-    //     case JSON_STRING : 
-    //         std::get<string>(m_var).~string();
-    //         break;
-    //     // using exised function to initialize array
-    //     case JSON_ARRAY :
-    //         json_clear_array();
-    //         std::get<vector<JsonValue>>(m_var).~vector<JsonValue>();
-    //         break;
-    //     case JSON_OBJECT :
-    //         json_clear_object();
-    //         std::get<vector<pair<string, JsonValue>>>.~vector<pair<string, JsonValue>>();
-    //         break;
-    //     default :
-    //         break;
-    // }
-    m_type = JSON_NULL;
-    m_var.~variant();   // is this really work?
-}
-
-// copy move swap function
-void JsonValue::json_copy(const JsonValue& rhs) noexcept {
-    json_free();
-    *this = rhs;
-}
-
-void JsonValue::json_move(JsonValue& rhs) noexcept {
-    json_free();
-    *this = rhs;
-    rhs.json_free();
-}
-
-void JsonValue::json_swap(JsonValue& rhs) noexcept {
-    if (*this != rhs) {
-        JsonValue tmp(rhs);
-        rhs = *this;
-        *this = tmp;
-        tmp.json_free();
+void JsonValue::init(const JsonValue& rhs) noexcept {
+    m_type = rhs.m_type;
+    switch (m_type) {
+        case JSON_NUMBER : 
+            m_num = rhs.m_num;     // 0 -> double
+            break;
+        case JSON_STRING : 
+            new(&m_str) string(rhs.m_str);
+            break;
+        case JSON_ARRAY :
+            // m_arr = vector<JsonValue>(rhs.m_arr);
+            new(&m_arr) vector<JsonValue>(rhs.m_arr);
+            break;
+        case JSON_OBJECT :
+            // m_obj = map<string, JsonValue>(rhs.m_obj);
+            new(&m_obj) map<string, JsonValue>(rhs.m_obj);
+            break;
+        default :
+            break;
     }
 }
 
+void JsonValue::free() noexcept {
+    // using exised function to destroy JsonValue
+    switch (m_type) {
+        case JSON_STRING : 
+            m_str.~basic_string();
+            break;
+        case JSON_ARRAY :
+            m_arr.~vector<JsonValue>();
+            break;
+        case JSON_OBJECT :
+            m_obj.~map<string, JsonValue>();
+            break;
+        default :
+            break;
+    }
+    m_type = JSON_NULL;
+}
+
 // all kinds of API provided for user 
-JSON_TYPE JsonValue::json_get_type() const noexcept {
+JSON_TYPE JsonValue::get_type() const noexcept {
     return m_type;
 }
 
-void JsonValue::json_set_type(JSON_TYPE type) noexcept {
+void JsonValue::set_type(JSON_TYPE type) noexcept {
+    free();
     m_type = type;
 }
 
-// void json_set_type(JSON_TYPE t) noexcept;
-
-bool JsonValue::json_get_boolean() const noexcept {
-    assert(m_type == JSON_TRUE || m_type == JSON_FALSE);
-    return m_type == JSON_TRUE;
-}
-
-void JsonValue::json_set_boolean(bool b) noexcept {
-    json_free();
-    m_type = b ? JSON_TRUE : JSON_FALSE;
-}
-
-double JsonValue::json_get_number() const noexcept {
+double JsonValue::get_number() const noexcept {
     assert(m_type == JSON_NUMBER);
-    return std::get<double>(m_var);
+    return m_num;
 }
 
-void JsonValue::json_set_number(double d) noexcept {
-    json_free();
+void JsonValue::set_number(double d) noexcept {
+    free();
     m_type = JSON_NUMBER;
-    m_var = d;
+    m_num = d;
 }
 
-// using existed fuction in std::string
-const string JsonValue::json_get_string() const noexcept {
+const string& JsonValue::get_string() const noexcept {
     assert(m_type == JSON_STRING);
-    return std::get<string>(m_var);
+    return m_str;
 }   
 
-size_t JsonValue::json_get_string_length() const noexcept {
+size_t JsonValue::get_string_length() const noexcept {
     assert(m_type == JSON_STRING);
-    return std::get<string>(m_var).size();
+    return m_str.size();
 }
 
-void JsonValue::json_set_string(const string& str) noexcept {
-    assert(!str.empty());
-    json_free();
-    m_type = JSON_STRING;
-    m_var = str;
+void JsonValue::set_string(const string& str) noexcept {
+    if (m_type == JSON_STRING) {
+        m_str = str;
+    } else {
+        free();
+        m_type = JSON_STRING;
+        new(&m_str) string(str);
+    }
 }
 
-// using existed fuction in std::vector
-void JsonValue::json_set_array(size_t capacity) noexcept {
-    json_free();
-    m_type = JSON_ARRAY;
-    // need a better method to initialize m_var
-    vector<JsonValue> tmp(capacity);
-    m_var = tmp;
-    tmp.~vector();
+void JsonValue::set_array(const vector<JsonValue> &arr) noexcept {
+    if (m_type == JSON_ARRAY) {
+        m_arr = arr;
+    } else {
+        free();
+        m_type = JSON_ARRAY;
+        new(&m_arr) vector<JsonValue>(arr);
+    }
 }
 
-size_t JsonValue::json_get_array_size() const noexcept {
+size_t JsonValue::get_array_size() const noexcept {
     assert(m_type == JSON_ARRAY);
-    return std::get<vector<JsonValue>>(m_var).size();
+    return m_arr.size();
 }
 
-size_t JsonValue::json_get_array_capacity() const noexcept {
+size_t JsonValue::get_array_capacity() const noexcept {
     assert(m_type == JSON_ARRAY);
-    return std::get<vector<JsonValue>>(m_var).capacity();
+    return m_arr.capacity();
 }
 
-void JsonValue::json_reserve_array(size_t capacity) noexcept {
+void JsonValue::reserve_array(size_t capacity) noexcept {
     assert(m_type == JSON_ARRAY);
-    std::get<vector<JsonValue>>(m_var).reserve(capacity);
+    m_arr.reserve(capacity);
 }
 
-void JsonValue::json_shrink_array() noexcept {
+void JsonValue::shrink_array() noexcept {
     assert(m_type == JSON_ARRAY);
-    std::get<vector<JsonValue>>(m_var).shrink_to_fit();
+    m_arr.shrink_to_fit();
 }
 
-void JsonValue::json_clear_array() noexcept {
+void JsonValue::clear_array() noexcept {
     assert(m_type == JSON_ARRAY);
-    std::get<vector<JsonValue>>(m_var).clear();
+    m_arr.clear();
 }
 
-const JsonValue& JsonValue::json_get_array_element(size_t index) const noexcept {
+const JsonValue& JsonValue::get_array_element(size_t index) const noexcept {
     assert(m_type == JSON_ARRAY);
-    return std::get<vector<JsonValue>>(m_var)[index];
+    return m_arr[index];
 }
 
-void JsonValue::json_pushback_array_element(const JsonValue& jv) noexcept {
+void JsonValue::pushback_array_element(const JsonValue& jv) noexcept {
     assert(m_type == JSON_ARRAY);
-    std::get<vector<JsonValue>>(m_var).push_back(jv);
+    m_arr.push_back(jv);
 }
 
-void JsonValue::json_popback_array_element() noexcept {
+void JsonValue::popback_array_element() noexcept {
     assert(m_type == JSON_ARRAY);
-    std::get<vector<JsonValue>>(m_var).pop_back();
+    m_arr.pop_back();
 }
 
-void JsonValue::json_insert_array_element(const JsonValue& jv, size_t index) noexcept{
-    assert(m_type == JSON_ARRAY && json_get_array_size() >= index);
-    std::get<vector<JsonValue>>(m_var).insert(std::get<vector<JsonValue>>(m_var).begin() + index, jv);
+void JsonValue::insert_array_element(size_t index, const JsonValue& jv) noexcept{
+    assert(m_type == JSON_ARRAY && get_array_size() >= index);
+    m_arr.insert(m_arr.begin() + index, jv);
 }
 
-void JsonValue::json_erase_array_element(size_t index, size_t count) noexcept {
-    assert(m_type == JSON_ARRAY && json_get_array_size() >= index + count);
-    std::get<vector<JsonValue>>(m_var).erase(std::get<vector<JsonValue>>(m_var).begin() + index, std::get<vector<JsonValue>>(m_var).begin() + index + count);
+void JsonValue::erase_array_element(size_t index, size_t count) noexcept {
+    assert(m_type == JSON_ARRAY && get_array_size() >= index + count);
+    m_arr.erase(m_arr.begin() + index, m_arr.begin() + index + count);
+}
+
+size_t JsonValue::get_object_size() const noexcept {
+    assert(m_type == JSON_OBJECT);
+    return m_obj.size();
+}
+
+const map<string, JsonValue>& JsonValue::get_object() const noexcept {
+    assert(m_type == JSON_OBJECT);
+    return m_obj;
 }
 
 // using existed fuction in std::map
-const map<string, JsonValue>& JsonValue::json_get_object() const noexcept {
-    assert(m_type == JSON_OBJECT);
-    return std::get<map<string, JsonValue>>(m_var);
+void JsonValue::set_object(const map<string, JsonValue>& obj) noexcept {
+    if (m_type == JSON_OBJECT) {
+        m_obj = obj;
+    } else {
+        free();
+        m_type = JSON_OBJECT;
+        new(&m_obj) map<string, JsonValue>(obj);
+    }
 }
 
-size_t JsonValue::json_get_object_size() const noexcept {
+void JsonValue::clear_object() noexcept {
     assert(m_type == JSON_OBJECT);
-    return std::get<map<string, JsonValue>>(m_var).size();
+    m_obj.clear();
 }
 
-void JsonValue::json_clear_object() noexcept {
+bool JsonValue::find_object_key(const string& key) const noexcept {
     assert(m_type == JSON_OBJECT);
-    std::get<map<string, JsonValue>>(m_var).clear();
+    return m_obj.find(key) != m_obj.end();
 }
 
-bool JsonValue::json_find_object_key(const string& key) const noexcept {
-    assert(m_type == JSON_OBJECT);
-    return std::get<map<string, JsonValue>>(m_var).find(key) != std::get<map<string, JsonValue>>(m_var).end();
-}
-
-const JsonValue& JsonValue::json_get_object_value(const string& key) const noexcept {
-    assert(m_type == JSON_OBJECT && json_find_object_key(key));
+const JsonValue& JsonValue::get_object_value(const string& key) const noexcept {
+    assert(m_type == JSON_OBJECT && find_object_key(key));
     // notice that we use 'at' here instead of [] to extract element in map
-    return std::get<map<string, JsonValue>>(m_var).at(key);
+    return m_obj.at(key);
 }
 
-void JsonValue::json_set_object_value(const string& key, const JsonValue& val) noexcept {
-    assert(m_type == JSON_OBJECT && json_find_object_key(key));
-    std::get<map<string, JsonValue>>(m_var).at(key) = val;
+void JsonValue::set_object_value(const string& key, const JsonValue& val) noexcept {
+    // it is not neccessary to assure that key has existed, coz we are gonna insert new pair [key, val] now
+    assert(m_type == JSON_OBJECT);
+    if (find_object_key(key)) m_obj[key] = val;
+    else m_obj.insert({key, val});
 }
 
-void JsonValue::json_remove_object_value(const string& key) noexcept {
-    assert(m_type == JSON_OBJECT && json_find_object_key(key));
-    std::get<map<string, JsonValue>>(m_var).erase(key);
+void JsonValue::remove_object_value(const string& key) noexcept {
+    assert(m_type == JSON_OBJECT && find_object_key(key));
+    m_obj.erase(key);
 }
 
 bool operator==(const JsonValue& lhs, const JsonValue& rhs) noexcept {
@@ -264,27 +231,27 @@ bool operator==(const JsonValue& lhs, const JsonValue& rhs) noexcept {
     }
     switch (lhs.m_type) {
         case JSON_NUMBER :
-            return std::get<double>(lhs.m_var) == std::get<double>(rhs.m_var);
+            return lhs.m_num == rhs.m_num;
             break;
         case JSON_STRING :
-            return std::get<string>(lhs.m_var) == std::get<string>(rhs.m_var);
+            return lhs.m_str == rhs.m_str;
             break;    
         case JSON_ARRAY :
-            if (lhs.json_get_array_size() != rhs.json_get_array_size()) {
+            if (lhs.get_array_size() != rhs.get_array_size()) {
                 return false;
             }
-            for (size_t i = 0; i < lhs.json_get_array_size(); ++i) {
-                if (lhs.json_get_array_element(i) != rhs.json_get_array_element(i)) {
+            for (size_t i = 0; i < lhs.get_array_size(); ++i) {
+                if (lhs.get_array_element(i) != rhs.get_array_element(i)) {
                     return false;
                 }
             }
             break;
         case JSON_OBJECT :
-            if (lhs.json_get_object_size() != rhs.json_get_object_size()) {
+            if (lhs.get_object_size() != rhs.get_object_size()) {
                 return false;
             }
-            for (auto& [key, val] : std::get<map<string, JsonValue>>(lhs.m_var)) {
-                if (!rhs.json_find_object_key(key) || val != rhs.json_get_object_value(key)) {
+            for (auto itr : lhs.m_obj) {
+                if (!rhs.find_object_key(itr.first) || itr.second != rhs.get_object_value(itr.first)) {
                     return false;
                 }
             }
