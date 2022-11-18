@@ -1,8 +1,6 @@
 #ifndef JSON_STRINGIFY_H
 #define JSON_STRINGIFY_H
 #include "JsonValue.h"
-#include <string>
-using namespace std;
 
 namespace myJson {
 
@@ -10,16 +8,17 @@ namespace myJson {
 class Generator {
 public:
     Generator(const JsonValue& jv, string& res);
-    ~Generator();
+    // notice that if we don't define dtor here, error "undefined reference" will occur
+    ~Generator() {}
 
 private:
     Generator(const Generator&) = delete;
-    void stringifyValue(const JsonValue& jv);
-    void stringifyString(const string& str);
+    void stringify_value(const JsonValue& jv);
+    void stringify_string(const string& str);
 
 private:
+    // store stringify info from json
     string& m_res;
-
 };
 
 };

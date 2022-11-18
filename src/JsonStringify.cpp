@@ -1,43 +1,46 @@
 #include "JsonStringify.h"
 #include <cassert>
-using namespace std;
 
 namespace myJson {
 
 // define all member functions declared in Generator class
 Generator::Generator(const JsonValue& jv, string& res) : m_res(res) {
-    m_res.clear();
-    stringifyValue(jv);
+    stringify_value(jv);
 }
 
-void Generator::stringifyValue(const JsonValue& jv) {
-    switch (jv.json_get_type()) {
+void Generator::stringify_value(const JsonValue& jv) {
+    // declare variables outside when jump into switch clauses, or error : jump to case label [-fpermissive]
+    size_t i = 0;
+    double tmp = 0;
+    char buf[32] = {0};
+    switch (jv.get_type()) {
         case JSON_NULL  : m_res += "null"; break;
         case JSON_TRUE  : m_res += "true"; break;
         case JSON_FALSE : m_res += "false"; break;
         case JSON_NUMBER :
-            double tmp = jv.json_get_number();
-            m_res += to_string(tmp);
+            // to_string() is not accessible here, coz the precision will be changed, use %.17g to assign precision by your own
+            sprintf(buf, "%.17g", jv.get_number());
+            m_res += buf;
             break;
         case JSON_STRING :
-            this->stringifyString(jv.json_get_string());
+            this->stringify_string(jv.get_string());
             break;
         case JSON_ARRAY :
             m_res += '[';
-            for (size_t i = 0; i < jv.json_get_array_size(); ++i) {
+            for (i = 0; i < jv.get_array_size(); ++i) {
                 if (i > 0) m_res += ',';
-                this->stringifyValue(jv.json_get_array_element(i));
+                this->stringify_value(jv.get_array_element(i));
             }
             m_res += ']';
             break;
         case JSON_OBJECT :
             m_res += '{';
-            size_t i = 0;
-            for (auto& [key, val] : jv.json_get_object()) {
+            i = 0;
+            for (auto itr : jv.get_object()) {
                 if (i > 0) m_res += ',';
-                this->stringifyString(key);
+                this->stringify_string(itr.first);
                 m_res += ':';
-                this->stringifyValue(val);
+                this->stringify_value(itr.second);
                 ++i;
             }
             m_res += '}';
@@ -48,7 +51,7 @@ void Generator::stringifyValue(const JsonValue& jv) {
     }
 }
 
-void Generator::stringifyString(const string& str) {
+void Generator::stringify_string(const string& str) {
     m_res += "\"";
     for (auto ch : str) {
         switch(ch) {
