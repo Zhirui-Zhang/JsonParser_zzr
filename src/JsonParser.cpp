@@ -4,29 +4,29 @@
 #include <cerrno>   // errno, ERANGE
 #include <cmath>    // HUGE_VAL
 #include <cstdlib>  // strtod
-using namespace std;
 
 namespace myJson {
 
 // using inline function instead of macro define
-inline void expect(const char* c, const char ch) {
+inline void expect(const char* &c, const char ch) {
     assert(*c == ch);
     ++c;
 }
 
 // define all functions declared in Parser class
+// ctor : Return const pointer to null-terminated contents. This is a handle to internal data. Do not modify or dire things may happen.
 Parser::Parser(JsonValue& jv, const string& json) : m_jv(jv), m_json(json.c_str()) {}
 
 // overall process to parse a json
 int Parser::parse() {
     int ret;
-    m_jv.json_init();
     parse_whitespace();
-    if ((ret == parse_value()) == PARSE_OK) {
+    // OMG I wrote ret == parse_value() once here, what a disaster!!!
+    if ((ret = parse_value()) == PARSE_OK) {
         parse_whitespace();
         if (*m_json != '\0') {
-            m_jv.json_set_type(JSON_NULL);
-            ret = PARSE_NOT_SINGULAR;
+            m_jv.set_type(JSON_NULL);
+            ret = PARSE_ROOT_NOT_SINGULAR;
         }
     }
     return ret;
@@ -49,7 +49,7 @@ int Parser::parse_literal(const string& literal, JSON_TYPE type) {
         }
     }
     m_json += i;
-    m_jv.json_set_type(type);
+    m_jv.set_type(type);
     return PARSE_OK;
 }
 
@@ -76,24 +76,24 @@ int Parser::parse_number() {
     errno = 0;
     double num = strtod(m_json, NULL);
     if (errno == ERANGE && (num == HUGE_VAL || num == -HUGE_VAL)) return PARSE_NUMBER_TOO_BIG;
-    m_jv.json_set_type(JSON_NUMBER);
-    m_jv.json_set_number(num);
+    m_jv.set_type(JSON_NUMBER);
+    m_jv.set_number(num);
     m_json = p;
     return PARSE_OK;
 }
 
 // read four hexadecimal digits
-const char* Parser::parse_hex4(const char* p, unsigned* u) {
-    *u = 0;
+const char* Parser::parse_hex4(const char* &p, unsigned& u) {
+    u = 0;
     for (int i = 0; i < 4; ++i) {
         char ch = *p++;
-        *u <<= 4;
+        u <<= 4;
         if (isdigit(ch)) {
-            *u |= ch - '0';
+            u |= ch - '0';
         } else if (ch >= 'A' && ch <= 'F') {
-            *u |= ch - 'A' + 10;
+            u |= ch - 'A' + 10;
         } else if (ch >= 'a' && ch <= 'f') {
-            *u |= ch - 'a' + 10;
+            u |= ch - 'a' + 10;
         } else {
             return NULL;
         }
@@ -123,17 +123,12 @@ void Parser::parse_encode_utf8(string &str, unsigned u) const noexcept {
 
 int Parser::parse_string_raw(string& tmp) {
     expect(m_json, '\"');
-    unsigned u1, u2;
     const char* p = m_json;
-    while (true) {
-        char ch = *p++;
-        switch (ch) {
-            case '\"' :
-                m_json = p;
-                return PARSE_OK;
-                break;
-            case '\\' :
-                switch (*p++) {
+    unsigned u1, u2;
+    while (*p != '\"') {
+        if (*p == '\0') return PARSE_MISS_QUOTATION_MARK;
+        if (*p == '\\' && ++p) {
+            switch (*p++) {
                     case '\"' : tmp += '\"'; break;
                     case '\\' : tmp += '\\'; break;
                     case '/'  : tmp += '/';  break;
@@ -143,11 +138,11 @@ int Parser::parse_string_raw(string& tmp) {
                     case 'r'  : tmp += '\r'; break;
                     case 't'  : tmp += '\t'; break;
                     case 'u'  : 
-                        if (parse_hex4(p, &u1) == NULL) return PARSE_INVALID_UNICODE_HEX;
+                        if (parse_hex4(p, u1) == NULL) return PARSE_INVALID_UNICODE_HEX;
                         if (u1 >= 0xD800 && u1 <= 0xDBFF) {
                             if (*p++ != '\\') return PARSE_INVALID_UNICODE_SURROGATE;
                             if (*p++ != 'u') return PARSE_INVALID_UNICODE_SURROGATE;
-                            if (parse_hex4(p, &u2) == NULL) return PARSE_INVALID_UNICODE_HEX;
+                            if (parse_hex4(p, u2) == NULL) return PARSE_INVALID_UNICODE_HEX;
                             if (u2 < 0xDC00 || u2 > 0XDFFF) return PARSE_INVALID_UNICODE_SURROGATE;
                             u1 = (((u1 - 0xD800) << 10) | (u2 - 0xDC00)) + 0x10000;
                         }
@@ -155,20 +150,18 @@ int Parser::parse_string_raw(string& tmp) {
                         break;
                     default : return PARSE_INVALID_STRING_ESCAPE;
                 }
-                break;
-            case '\0' : return PARSE_NUMBER_MISS_QUOTATION_MARK;
-            default : 
-                if ((unsigned char)ch < 0x20) return PARSE_INVALID_STRING_CHAR;
-                tmp += ch;
-        }
+        } else if ((unsigned char)*p < 0x20) return PARSE_INVALID_STRING_CHAR;
+        else tmp += *p++;
     }
+    m_json = ++p;
+    return PARSE_OK;
 }
 
 int Parser::parse_string() {
     int ret;
     string tmp;
     if ((ret = parse_string_raw(tmp)) == PARSE_OK) {
-        m_jv.json_set_string(tmp);
+        m_jv.set_string(tmp);
     }
     return ret;
 }
@@ -182,11 +175,14 @@ int Parser::parse_array() {
     vector<JsonValue> tmp;
     if (*m_json == ']') {
         ++m_json;
-        m_jv.json_set_array(0);
+        m_jv.set_array(tmp);
         return PARSE_OK;
     }
     while (true) {
-        if ((ret = parse_value()) != PARSE_OK) break;
+        if ((ret = parse_value()) != PARSE_OK) {
+            m_jv.set_type(JSON_NULL);    
+            break;
+        }
         ++size;
         tmp.push_back(m_jv);
         parse_whitespace();
@@ -195,16 +191,15 @@ int Parser::parse_array() {
             parse_whitespace();
         } else if (*m_json == ']') {
             ++m_json;
-            for (int i = 0; i < size; ++i) {
-                m_jv.json_pushback_array_element(tmp[i]);
-            }
+            m_jv.set_array(tmp);
+            // omit break once here
+            break;
         } else {
+            m_jv.set_type(JSON_NULL); 
             ret = PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
             break;
         }
     }
-    tmp.clear();
-    tmp.~vector();
     return ret;
 }
 
@@ -216,26 +211,28 @@ int Parser::parse_object() {
     map<string, JsonValue> tmp;
     parse_whitespace();
     if (*m_json == '}') {
-        m_jv.json_free();
-        m_jv.json_set_type(JSON_OBJECT);
+        ++m_json;
+        m_jv.set_object(tmp); 
         return PARSE_OK;
     }
     while (true) {
-        if (*m_json != '"') {
+        if (*m_json != '\"') {
             ret = PARSE_MISS_KEY;
             break;
         }
         if ((ret = parse_string_raw(tmpKey)) != PARSE_OK) break;
         parse_whitespace();
-        if (*m_json != ':') {
+        if (*m_json++ != ':') {
             ret = PARSE_MISS_COLON;
             break;
         }
-        ++m_json;
         parse_whitespace();
-        if ((ret = parse_value()) != PARSE_OK) break;
+        if ((ret = parse_value()) != PARSE_OK) {
+            m_jv.set_type(JSON_NULL);
+            break;
+        }
         tmp[tmpKey] = m_jv;
-        m_jv.json_free();
+        m_jv.set_type(JSON_NULL);
         tmpKey = "";
         parse_whitespace();
         if (*m_json == ',') {
@@ -243,17 +240,15 @@ int Parser::parse_object() {
             parse_whitespace();
         } else if (*m_json == '}') {
             ++m_json;
-            for (auto& [key, val] : tmp) {
-                m_jv.json_set_object_value(key, val);
-            }
+            m_jv.set_object(tmp); 
             return PARSE_OK;
         } else {
+            m_jv.set_type(JSON_NULL);
             ret = PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+            // forgot to break here, TEST_ERROR error happened
+            break;
         }
     }
-    tmpKey.clear();
-    tmp.clear();
-    tmp.~map();
     return ret;
 }
 
