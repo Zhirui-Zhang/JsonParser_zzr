@@ -74,6 +74,7 @@ int Parser::parse_number() {
         while (isdigit(*p)) ++p;
     }
     errno = 0;
+    // strtod : Convert a string to a floating-point number.
     double num = strtod(m_json, NULL);
     if (errno == ERANGE && (num == HUGE_VAL || num == -HUGE_VAL)) return PARSE_NUMBER_TOO_BIG;
     m_jv.set_type(JSON_NUMBER);
@@ -125,10 +126,14 @@ int Parser::parse_string_raw(string& tmp) {
     expect(m_json, '\"');
     const char* p = m_json;
     unsigned u1, u2;
-    while (*p != '\"') {
-        if (*p == '\0') return PARSE_MISS_QUOTATION_MARK;
-        if (*p == '\\' && ++p) {
-            switch (*p++) {
+    while (true) {
+        char ch = *p++;
+        switch (ch) {
+            case '\"' :
+                m_json = p;
+                return PARSE_OK;
+            case '\\' :
+                switch (*p++) {
                     case '\"' : tmp += '\"'; break;
                     case '\\' : tmp += '\\'; break;
                     case '/'  : tmp += '/';  break;
@@ -150,11 +155,14 @@ int Parser::parse_string_raw(string& tmp) {
                         break;
                     default : return PARSE_INVALID_STRING_ESCAPE;
                 }
-        } else if ((unsigned char)*p < 0x20) return PARSE_INVALID_STRING_CHAR;
-        else tmp += *p++;
+                break;
+            case '\0' :
+                return PARSE_MISS_QUOTATION_MARK;
+            default : 
+                if ((unsigned char)ch < 0x20) return PARSE_INVALID_STRING_CHAR;
+                tmp += ch;
+        }
     }
-    m_json = ++p;
-    return PARSE_OK;
 }
 
 int Parser::parse_string() {
@@ -169,7 +177,6 @@ int Parser::parse_string() {
 // using tmp vetor to store elements in array
 int Parser::parse_array() {
     int ret;
-    size_t size = 0;
     expect(m_json, '[');
     parse_whitespace();
     vector<JsonValue> tmp;
@@ -183,7 +190,6 @@ int Parser::parse_array() {
             m_jv.set_type(JSON_NULL);    
             break;
         }
-        ++size;
         tmp.push_back(m_jv);
         parse_whitespace();
         if (*m_json == ',') {
@@ -208,21 +214,26 @@ int Parser::parse_object() {
     int ret;
     expect(m_json, '{');
     string tmpKey;
-    map<string, JsonValue> tmp;
+    map<string, JsonValue> tmpMap;
     parse_whitespace();
     if (*m_json == '}') {
         ++m_json;
-        m_jv.set_object(tmp); 
+        m_jv.set_object(tmpMap); 
         return PARSE_OK;
     }
     while (true) {
         if (*m_json != '\"') {
+            m_jv.set_type(JSON_NULL);
             ret = PARSE_MISS_KEY;
             break;
         }
-        if ((ret = parse_string_raw(tmpKey)) != PARSE_OK) break;
+        if ((ret = parse_string_raw(tmpKey)) != PARSE_OK) {
+            m_jv.set_type(JSON_NULL);
+            break;
+        }
         parse_whitespace();
         if (*m_json++ != ':') {
+            m_jv.set_type(JSON_NULL);
             ret = PARSE_MISS_COLON;
             break;
         }
@@ -231,8 +242,7 @@ int Parser::parse_object() {
             m_jv.set_type(JSON_NULL);
             break;
         }
-        tmp[tmpKey] = m_jv;
-        m_jv.set_type(JSON_NULL);
+        tmpMap[tmpKey] = m_jv;
         tmpKey = "";
         parse_whitespace();
         if (*m_json == ',') {
@@ -240,7 +250,7 @@ int Parser::parse_object() {
             parse_whitespace();
         } else if (*m_json == '}') {
             ++m_json;
-            m_jv.set_object(tmp); 
+            m_jv.set_object(tmpMap); 
             return PARSE_OK;
         } else {
             m_jv.set_type(JSON_NULL);
