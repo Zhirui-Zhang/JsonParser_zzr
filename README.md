@@ -1,7 +1,6 @@
 # TinyJsonParser
 
 > Thanks for [json-tutorial](https://github.com/miloyip/json-tutorial.git) provided by miloyip.
-
 This is a small C++ project using for parsing/generating **json/string** format file.
 
 ## Characteristic
@@ -17,7 +16,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
 1. Download/Gitclone this source project
    
    ```git
-   git clone git@github.com:Syopain/Json.git 
+   git clone git@github.com:Zhirui-Zhang/JsonParser_zzr.git
    ```
 
 2. Create build directory and enter
@@ -28,16 +27,14 @@ This is a small C++ project using for parsing/generating **json/string** format 
 
 3. Set CMake compilation mode (Debug/Release)
 
-> before this step, maybe you should config CMake enviroment at first
-> 
-> ```bash
-> sudo apt-get install cmake
-> ```
-
-    ```bash
-    cmake -dcmake_build_type=debug ..
-    ```
-
+   > before this step, maybe you should config CMake enviroment at first
+   > ```bash
+   > sudo apt-get install cmake
+   > ```
+   
+   ```bash
+   cmake -dcmake_build_type=debug ..
+   ```
 4. Makefile & Run myJson project
    
    ```makefile
@@ -51,29 +48,27 @@ This is a small C++ project using for parsing/generating **json/string** format 
 
 6. We can also use valgrind tool to check if memory leaks
 
-> likewise, config valgrind environment before
-> 
-> ```bash
-> sudo apt-get install valgrind
-> ```
-
-    ```bash
-    valgrind --leak-check=full  ./myJson
-    ```
+   > likewise, config valgrind environment before
+   > ```bash
+   > sudo apt-get install valgrind
+   > ```
+   
+   ```bash
+   valgrind --leak-check=full  ./myJson
+   ```
    
    and the result will be showed as :
    
    ![JsonParser_zzr/memory check.png at 76d47a62c5a23ae94bf2863da848c49583bf6691 · Zhirui-Zhang/JsonParser_zzr · GitHub](https://github.com/Zhirui-Zhang/JsonParser_zzr/blob/76d47a62c5a23ae94bf2863da848c49583bf6691/root/memory%20check.png)
-
 ## Description
 
 ### Files
 
 * root directory : store all attachments
 
-* src directory : store declaration and definition for different classes, includJing :
+* src directory : store declaration and definition for different classes, including :
   
-  * JsonEnum.h : define `JSON_TYPE` and `PARSE_TYPE` enum structure
+  * JsonEnum.h : define `JSON_TYPE` and `PARSE_TYPE` enum struct
   
   * Json.h / Json.cpp : define smart pointer member `m_jv` to JsonValue and all member functions 
   
@@ -83,13 +78,9 @@ This is a small C++ project using for parsing/generating **json/string** format 
   
   * JsonStringify.h / JsonStringify.cpp : define all member functions using for generating string from existed json
 
-* JsonTest.cpp : test the whole project and verify parsing/generating functions
+* JsonTest.cpp : test the whole project and verify parsing/generating functions especially
 
-* CMakeLists.txt : create auto compilation, maybe you should config cmake enviroment first by 
-  
-  ```bash
-  sudo apt-get install cmake
-  ```
+* CMakeLists.txt : create auto compilation
 
 * README.md : introduction to this project
 
@@ -101,7 +92,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
   
   * In JsonValue class, we use `m_type` member to indicate **type** for current json. Besides, we use `union`struct to store json info because a json has only **one type** among **7 types**, which are :
     
-    `null`,` true`,` false`,` number`,` string`,` array`and`object`
+    `null`, `true`, `false`, `number`, `string`, `array` and `object`
   
   * As for member functions, we use **parse/stringify** function to connect Parser/Generator class, **vector** container for array type and **map** container for object type, also define some common APIs such as `size()`, `clear()`, `insert()`, `erase()` etc.
 
@@ -119,7 +110,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
     codepoint = 0x10000 + (H − 0xD800) × 0x400 + (L − 0xDC00)
     ```
     
-    to transfer it, if the input string is invalid, i.e. `(unsigned char)ch < 0x20`, return PARSE_INVALID_STRING_CHAR.
+    to transfer it, if the input string is invalid, i.e. `(unsigned char)ch < 0x20`, return **PARSE_INVALID_STRING_CHAR**.
   
   * `parse_array()` deals with `array` type, construct `vector<JsonValue>` tmp to store array info, set `m_jv` as tmp when meets `]` finally.
   
@@ -134,5 +125,3 @@ This is a small C++ project using for parsing/generating **json/string** format 
 * Use C++17 new characteristic such as `std::variant` struct would be better than `union` struct, since the `ctor` and `dtor` in `union` will be complicated and make mistakes easily.
 
 * Use `map<string, JsonValue>` as `JSON_OBJECT` container cannot keep the original sequence same as input string. Things will be better when using `vector<pair<string, JsonValue>>` struct instead, but **time complexity** will increase from `O(logn)` to `O(n)` in `find` and `remove` operation. Therefore, we should consider different containers between `Query-Oriented` task and `Storage-Oriented` task.
-
-
