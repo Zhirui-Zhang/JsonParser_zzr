@@ -27,6 +27,11 @@ This is a small C++ project using for parsing/generating **json/string** format 
    ```
 
 3. Set CMake compilation mode (Debug/Release)
+
+   > before this step, maybe you should config CMake enviroment at first
+   > ```bash
+   > sudo apt-get install cmake
+   > ```
    
    ```bash
    cmake -dcmake_build_type=debug ..
@@ -44,6 +49,11 @@ This is a small C++ project using for parsing/generating **json/string** format 
    ![JsonParser_zzr/result.png at 6da6ad99ffec113197a4e18029d538c4eb575588 · Zhirui-Zhang/JsonParser_zzr · GitHub](https://github.com/Zhirui-Zhang/JsonParser_zzr/blob/6da6ad99ffec113197a4e18029d538c4eb575588/root/result.png "test")
 
 6. We can also use valgrind tool to check if memory leaks
+
+   > likewise, config valgrind environment before
+   > ```bash
+   > sudo apt-get install valgrind
+   > ```
    
    ```bash
    valgrind --leak-check=full  ./myJson
