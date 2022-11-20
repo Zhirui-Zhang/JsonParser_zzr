@@ -89,7 +89,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
   
   * In JsonValue class, we use `m_type` member to indicate **type** for current json. Besides, we use `union`struct to store json info because a json has only **one type** among **7 types**, which are :
     
-    `null`,` true`,` false`,` number`,` string`,` array`and`object`
+    `null`, `true`, `false`, `number`, `string`, `array` and `object`
   
   * As for member functions, we use **parse/stringify** function to connect Parser/Generator class, **vector** container for array type and **map** container for object type, also define some common APIs such as `size()`, `clear()`, `insert()`, `erase()` etc.
 
