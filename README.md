@@ -71,7 +71,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
 
 * src directory : store declaration and definition for different classes, including :
   
-  * JsonEnum.h : define `JSON_TYPE` and `PARSE_TYPE` enum structure
+  * JsonEnum.h : define `JSON_TYPE` and `PARSE_TYPE` enum struct
   
   * Json.h / Json.cpp : define smart pointer member `m_jv` to JsonValue and all member functions 
   
@@ -81,13 +81,9 @@ This is a small C++ project using for parsing/generating **json/string** format 
   
   * JsonStringify.h / JsonStringify.cpp : define all member functions using for generating string from existed json
 
-* JsonTest.cpp : test the whole project and verify parsing/generating functions
+* JsonTest.cpp : test the whole project and verify parsing/generating functions especially
 
-* CMakeLists.txt : create auto compilation, maybe you should config cmake enviroment first by 
-  
-  ```bash
-  sudo apt-get install cmake
-  ```
+* CMakeLists.txt : create auto compilation
 
 * README.md : introduction to this project
 
@@ -117,7 +113,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
     codepoint = 0x10000 + (H − 0xD800) × 0x400 + (L − 0xDC00)
     ```
     
-    to transfer it, if the input string is invalid, i.e. `(unsigned char)ch < 0x20`, return PARSE_INVALID_STRING_CHAR.
+    to transfer it, if the input string is invalid, i.e. `(unsigned char)ch < 0x20`, return **PARSE_INVALID_STRING_CHAR**.
   
   * `parse_array()` deals with `array` type, construct `vector<JsonValue>` tmp to store array info, set `m_jv` as tmp when meets `]` finally.
   
