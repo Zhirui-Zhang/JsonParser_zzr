@@ -69,7 +69,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
 
 * root directory : store all attachments
 
-* src directory : store declaration and definition for different classes, includJing :
+* src directory : store declaration and definition for different classes, including :
   
   * JsonEnum.h : define `JSON_TYPE` and `PARSE_TYPE` enum structure
   
