@@ -17,7 +17,7 @@ This is a small C++ project using for parsing/generating **json/string** format 
 1. Download/Gitclone this source project
    
    ```git
-   git clone git@github.com:Syopain/Json.git 
+   git clone git@github.com:Zhirui-Zhang/JsonParser_zzr.git
    ```
 
 2. Create build directory and enter
