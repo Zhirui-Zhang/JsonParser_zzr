@@ -7,22 +7,22 @@ namespace myJson {
 Json::Json() noexcept : m_jv(new JsonValue()) {}
 
 Json::Json(const Json& rhs) noexcept {
-    m_jv.reset(new JsonValue(*(rhs.m_jv)));
+    m_jv = rhs.m_jv;
 }
 
 Json& Json::operator=(const Json& rhs) noexcept {
-    m_jv.reset(new JsonValue(*(rhs.m_jv)));
+    m_jv = rhs.m_jv;
     return *this;
 }
 
-Json::Json(Json&& rhs) noexcept {
-    m_jv.reset(rhs.m_jv.release());
-}
+// Json::Json(Json&& rhs) noexcept {
+//     m_jv.reset(rhs.m_jv.release());
+// }
 
-Json& Json::operator=(Json&& rhs) noexcept {
-    m_jv.reset(rhs.m_jv.release());
-    return *this;
-}
+// Json& Json::operator=(Json&& rhs) noexcept {
+//     m_jv.reset(rhs.m_jv.release());
+//     return *this;
+// }
 
 // parse/stringify function
 int Json::parse(const string& json) noexcept {
@@ -36,14 +36,14 @@ void Json::stringify(string& str) const noexcept {
 
 // copy move swap function
 void Json::copy(const Json& rhs) noexcept {
-    m_jv.reset(new JsonValue(*(rhs.m_jv)));
+    m_jv = rhs.m_jv;
 }
 
 void Json::move(Json& rhs) noexcept {
-    m_jv.reset(new JsonValue(*(rhs.m_jv)));
+    m_jv = rhs.m_jv;
+    rhs.m_jv->~JsonValue();
     // after moving action was finished, call JsonValue dtor in rhs.m_jv to assure JsonValue was moved successfully
     // but not unique_ptr release function, coz it will destory rhs object, causing v2(in JsonTest.cpp) not available
-    rhs.m_jv->~JsonValue();
 }
 
 void Json::swap(Json& rhs) noexcept {

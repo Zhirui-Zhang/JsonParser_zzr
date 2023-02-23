@@ -19,8 +19,8 @@ public:
     ~Json() noexcept {}
     Json(const Json& rhs) noexcept;
     Json& operator=(const Json& rhs) noexcept;
-    Json(Json&& rhs) noexcept;
-    Json& operator=(Json&& rhs) noexcept;
+    // Json(Json&& rhs) noexcept;
+    // Json& operator=(Json&& rhs) noexcept;
 
     // parse/stringify function
     int parse(const string& json) noexcept;
@@ -64,8 +64,8 @@ public:
 
 private:
     // create an smart ptr to JsonValue class, Json class provides API while JsonValue class takes charge of realization
-    // unique ptr has a counter inside and release automatically when counter equals to 0, so all members can be destroyed without memory leak
-    unique_ptr<JsonValue> m_jv;
+    // shared ptr has a counter inside and release automatically when counter equals to 0, so all members can be destroyed without memory leak
+    shared_ptr<JsonValue> m_jv;
 
     // override for == and != operator
     friend bool operator==(const Json& lhs, const Json& rhs) noexcept;
